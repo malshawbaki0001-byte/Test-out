@@ -1,5 +1,6 @@
 import bcrypt
 from datetime import datetime
+import re
 
 class Course:
     def __init__(self, course_code, name, credits, lecture_hours, lab_hours, max_capacity, schedule_info, classroom, day_time):
@@ -51,12 +52,13 @@ class Course:
         return all(prereq in completed_courses for prereq in prerequisites)
 
 class Student:
-    def __init__(self, student_id, name, email, program, current_level):
+    def __init__(self, student_id, name, email, program, current_level, registration_year):
         self.student_id = student_id
         self.name = name
         self.email = email
         self.program = program
         self.current_level = current_level
+        self.registration_year = registration_year
     
     def get_completed_credits(self, db):
         conn = db.get_connection()
@@ -213,37 +215,3 @@ class UserManager:
                         'email': user[1],
                         'role': user[3],
                         'name': user[4]
-                    }
-            except:
-                # إذا فشل التحقق بـ bcrypt، استخدم نسخة مبسطة للاختبار
-                if password == "admin123" and user_id == "ADMIN001":
-                    return {
-                        'user_id': user[0],
-                        'email': user[1],
-                        'role': user[3],
-                        'name': user[4]
-                    }
-                if password == "student123" and user_id.startswith("STU"):
-                    return {
-                        'user_id': user[0],
-                        'email': user[1],
-                        'role': user[3],
-                        'name': user[4]
-                    }
-        return None
-    
-    def get_student_profile(self, user_id):
-        conn = self.db.get_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT u.user_id, u.name, u.email, s.program, s.current_level
-            FROM users u
-            JOIN students s ON u.user_id = s.student_id
-            WHERE u.user_id = ?
-        ''', (user_id,))
-        result = cursor.fetchone()
-        conn.close()
-        
-        if result:
-            return Student(*result)
-        return None
