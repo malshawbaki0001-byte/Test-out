@@ -1,19 +1,18 @@
 import sqlite3
 import bcrypt
 
-
 class Database:
-    def _init_(self, db_name="course_registration.db"):
+    def __init__(self, db_name="course_registration.db"):
         self.db_name = db_name
         self.init_database()
-
+    
     def get_connection(self):
         return sqlite3.connect(self.db_name)
-
+    
     def init_database(self):
         conn = self.get_connection()
         cursor = conn.cursor()
-
+        
         # جدول المستخدمين
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
@@ -24,7 +23,7 @@ class Database:
                 name TEXT NOT NULL
             )
         ''')
-
+        
         # جدول الطلاب
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS students (
@@ -34,7 +33,7 @@ class Database:
                 FOREIGN KEY (student_id) REFERENCES users(user_id)
             )
         ''')
-
+        
         # جدول المقررات
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS courses (
@@ -48,16 +47,27 @@ class Database:
                 classroom TEXT NOT NULL
             )
         ''')
-
+        
+        # جدول المتطلبات السابقة
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS prerequisites (
+                course_code TEXT,
+                prerequisite_code TEXT,
+                PRIMARY KEY (course_code, prerequisite_code),
+                FOREIGN KEY (course_code) REFERENCES courses(course_code),
+                FOREIGN KEY (prerequisite_code) REFERENCES courses(course_code)
+            )
+        ''')
+        
         conn.commit()
-
+        
         # إضافة بيانات أولية
         self.add_sample_data(conn)
         conn.close()
-
+    
     def add_sample_data(self, conn):
         cursor = conn.cursor()
-
+        
         # إضافة مستخدم مسؤول
         try:
             admin_password = bcrypt.hashpw(b"admin123", bcrypt.gensalt())
@@ -65,22 +75,9 @@ class Database:
                 INSERT OR IGNORE INTO users (user_id, email, password, role, name)
                 VALUES (?, ?, ?, ?, ?)
             ''', ("ADMIN001", "admin@ece.edu", admin_password, "admin", "System Administrator"))
-
-            # إضافة طالب تجريبي
-            student_password = bcrypt.hashpw(b"student123", bcrypt.gensalt())
-            cursor.execute('''
-                INSERT OR IGNORE INTO users (user_id, email, password, role, name)
-                VALUES (?, ?, ?, ?, ?)
-            ''', ("STU001", "student@ece.edu", student_password, "student", "Test Student"))
-
-            cursor.execute('''
-                INSERT OR IGNORE INTO students (student_id, program, current_level)
-                VALUES (?, ?, ?)
-            ''', ("STU001", "Computer", 3))
-
-        except Exception as e:
-            print(f"Error adding users: {e}")
-
+        except:
+            pass
+        
         # إضافة مقررات نموذجية
         sample_courses = [
             ("COE100", "Programming Fundamentals", 3, 3, 0, 50, "Mon-Wed 10:00-11:30", "Room 101"),
@@ -89,14 +86,23 @@ class Database:
             ("COE300", "Algorithms", 3, 3, 0, 45, "Tue-Thu 11:00-12:30", "Room 103"),
             ("COE310", "Computer Architecture", 4, 3, 2, 30, "Mon-Wed 15:00-16:30", "Lab B"),
         ]
-
-        try:
-            cursor.executemany('''
-                INSERT OR IGNORE INTO courses 
-                (course_code, name, credits, lecture_hours, lab_hours, max_capacity, schedule_info, classroom)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', sample_courses)
-        except Exception as e:
-            print(f"Error adding courses: {e}")
-
+        
+        cursor.executemany('''
+            INSERT OR IGNORE INTO courses 
+            (course_code, name, credits, lecture_hours, lab_hours, max_capacity, schedule_info, classroom)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', sample_courses)
+        
+        # إضافة متطلبات سابقة
+        prerequisites = [
+            ("COE200", "COE100"),
+            ("COE300", "COE200"),
+            ("COE310", "COE210"),
+        ]
+        
+        cursor.executemany('''
+            INSERT OR IGNORE INTO prerequisites (course_code, prerequisite_code)
+            VALUES (?, ?)
+        ''', prerequisites)
+        
         conn.commit()
