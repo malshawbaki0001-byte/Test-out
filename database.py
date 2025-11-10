@@ -21,7 +21,8 @@ class Database:
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 role TEXT NOT NULL CHECK(role IN ('student', 'admin')),
-                name TEXT NOT NULL
+                name TEXT NOT NULL,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
@@ -31,6 +32,7 @@ class Database:
                 student_id TEXT PRIMARY KEY,
                 program TEXT NOT NULL CHECK(program IN ('Computer', 'Communications', 'Power', 'Biomedical')),
                 current_level INTEGER NOT NULL,
+                registration_year INTEGER NOT NULL,
                 FOREIGN KEY (student_id) REFERENCES users(user_id)
             )
         ''')
@@ -100,28 +102,28 @@ class Database:
             # إضافة مسؤول
             admin_password = bcrypt.hashpw(b"admin123", bcrypt.gensalt())
             cursor.execute('''
-                INSERT OR REPLACE INTO users (user_id, email, password, role, name)
+                INSERT OR IGNORE INTO users (user_id, email, password, role, name)
                 VALUES (?, ?, ?, ?, ?)
             ''', ("ADMIN001", "admin@ece.edu", admin_password, "admin", "System Administrator"))
             
-            # إضافة طلاب
+            # إضافة طلاب نموذجيين
             students = [
-                ("STU001", "student1@ece.edu", "Computer", 3, "Ahmed Ali"),
-                ("STU002", "student2@ece.edu", "Communications", 2, "Fatima Mohammed"),
-                ("STU003", "student3@ece.edu", "Power", 4, "Khalid Hassan")
+                ("STU001", "student1@ece.edu", "Computer", 3, 2022, "Ahmed Ali"),
+                ("STU002", "student2@ece.edu", "Communications", 2, 2023, "Fatima Mohammed"),
+                ("STU003", "student3@ece.edu", "Power", 4, 2021, "Khalid Hassan")
             ]
             
-            for student_id, email, program, level, name in students:
+            for student_id, email, program, level, year, name in students:
                 student_password = bcrypt.hashpw(b"student123", bcrypt.gensalt())
                 cursor.execute('''
-                    INSERT OR REPLACE INTO users (user_id, email, password, role, name)
+                    INSERT OR IGNORE INTO users (user_id, email, password, role, name)
                     VALUES (?, ?, ?, 'student', ?)
                 ''', (student_id, email, student_password, name))
                 
                 cursor.execute('''
-                    INSERT OR REPLACE INTO students (student_id, program, current_level)
-                    VALUES (?, ?, ?)
-                ''', (student_id, program, level))
+                    INSERT OR IGNORE INTO students (student_id, program, current_level, registration_year)
+                    VALUES (?, ?, ?, ?)
+                ''', (student_id, program, level, year))
             
             # إضافة مقررات
             courses = [
@@ -135,7 +137,7 @@ class Database:
             ]
             
             cursor.executemany('''
-                INSERT OR REPLACE INTO courses 
+                INSERT OR IGNORE INTO courses 
                 (course_code, name, credits, lecture_hours, lab_hours, max_capacity, schedule_info, classroom, day_time)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', courses)
@@ -149,7 +151,7 @@ class Database:
             ]
             
             cursor.executemany('''
-                INSERT OR REPLACE INTO prerequisites (course_code, prerequisite_code)
+                INSERT OR IGNORE INTO prerequisites (course_code, prerequisite_code)
                 VALUES (?, ?)
             ''', prerequisites)
             
@@ -164,7 +166,7 @@ class Database:
             ]
             
             cursor.executemany('''
-                INSERT OR REPLACE INTO transcripts (student_id, course_code, grade, semester)
+                INSERT OR IGNORE INTO transcripts (student_id, course_code, grade, semester)
                 VALUES (?, ?, ?, ?)
             ''', transcripts)
             
